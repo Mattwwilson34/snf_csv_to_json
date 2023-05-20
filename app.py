@@ -128,6 +128,7 @@ def format_address(row, output_dict):
     zip_code = row[output_dict["Provider Zip Code"]]
     return f"{address}, {city}, {state} {zip_code}"
 
+
 def format_output_dictionaries(row, output_dict):
     """Formats the output dictionaries to match the expected output format"""
     return {
@@ -141,16 +142,19 @@ def format_output_dictionaries(row, output_dict):
     }
 
 
+def get_index_dic_from_columns(columns):
+    """Returns a dictionary with column headers as the keys and initial values of None"""
+    index_dict = {}
+    for column in columns:
+        index_dict[column] = None
+    return index_dict
+
+
 # Dictionary to store the index of each column to filter by
-filter_dict = {}
-for column in FILTER_COLUMNS:
-    filter_dict[column] = None
+filter_dict = get_index_dic_from_columns(FILTER_COLUMNS)
 
 # Dictionary to store index of each column to include in the output
-output_dict = {}
-for column in OUTPUT_COLUMNS:
-    output_dict[column] = None
-
+output_dict = get_index_dic_from_columns(OUTPUT_COLUMNS)
 
 # Begin CSV parsing
 with codecs.open(FILE, "r", encoding="latin1") as csv_file:
