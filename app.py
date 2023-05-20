@@ -142,7 +142,7 @@ def format_output_dictionaries(row, output_dict):
     }
 
 
-def get_index_dic_from_columns(columns):
+def get_index_dict_from_columns(columns):
     """Returns a dictionary with column headers as the keys and initial values of None"""
     index_dict = {}
     for column in columns:
@@ -151,10 +151,10 @@ def get_index_dic_from_columns(columns):
 
 
 # Dictionary to store the index of each column to filter by
-filter_dict = get_index_dic_from_columns(FILTER_COLUMNS)
+filter_dict = get_index_dict_from_columns(FILTER_COLUMNS)
 
 # Dictionary to store index of each column to include in the output
-output_dict = get_index_dic_from_columns(OUTPUT_COLUMNS)
+output_dict = get_index_dict_from_columns(OUTPUT_COLUMNS)
 
 # Begin CSV parsing
 with codecs.open(FILE, "r", encoding="latin1") as csv_file:
