@@ -1,12 +1,17 @@
 import csv
 import codecs
 import pprint
+import json
 from arg_parse import parse_arguments
 
 # Parse command line arguments
 args = parse_arguments()
 
+# File to output the results to
+OUTPUT_FILE = "output.json"
+
 # Assign the arguments to constant variables
+# See cell_meets_filter_condition func for conditional logic
 FILE = args.file
 STATE = args.state.upper()
 NUM_FACILITIES = args.num_facilities
@@ -16,6 +21,7 @@ MAX_NUM_DEFICIENCIES = args.max_num_deficiencies
 MAX_NUM_PENALTIES = args.max_number_penalties
 
 # List of columns to filter dataset by
+# Must match the CSV file headers and the command line arguments except for FILE
 FILTER_COLUMNS = [
     "Provider State",
     "Overall Rating",
@@ -25,6 +31,8 @@ FILTER_COLUMNS = [
 ]
 
 # List of columns to include in the output
+# Must match the CSV file headers
+# If adding or removing columns, update the OUTPUT_COLUMN_NAMES dictionary
 OUTPUT_COLUMNS = [
     "Provider Name",
     "Provider Address",
@@ -42,7 +50,8 @@ OUTPUT_COLUMNS = [
 # Output will be a list of dictionaries
 # Each dictionary will represent a facility
 # Each key in this dictionary will represent a key in the output dictionary
-# Each value array will represent the columns in the CSV file that will be concatenated into a single string
+# Each value array will represent the column cell values in the CSV 
+# For arrays with more than one value they will be concatenated with a comma and space
 OUTPUT_COLUMN_NAMES = {
     "name": ["Provider Name"],
     "address": [
@@ -110,6 +119,37 @@ def get_valid_number(value, default):
     return int(value) if value.isdigit() else default
 
 
+def get_cell_val_dict(row, column_list, filter_dict):
+    """Returns a dictionary with the column names as the keys and the cell values as the values"""
+
+    cell_val_dict = {}
+    for column in column_list:
+        if column == "Provider State":
+            cell_val_dict[column] = row[filter_dict[column]]
+        elif column == "Overall Rating":
+            cell_val_dict[column] = get_valid_number(row[filter_dict[column]], 1)
+        else:
+            cell_val_dict[column] = get_valid_number(row[filter_dict[column]], 0)
+    return cell_val_dict
+
+
+def cell_meets_filter_condition(key, cell_value):
+    """Returns True if the cell value meets the filter condition, otherwise returns False"""
+
+    if key == "Provider State":
+        return cell_value == STATE
+    elif key == "Overall Rating":
+        return cell_value >= MIN_OVERALL_RATING
+    elif key == "Number of Certified Beds":
+        return cell_value >= MIN_NUM_BEDS
+    elif key == "Rating Cycle 1 Total Number of Health Deficiencies":
+        return cell_value <= MAX_NUM_DEFICIENCIES
+    elif key == "Total Number of Penalties":
+        return cell_value <= MAX_NUM_PENALTIES
+    else:
+        return False
+
+
 # Dictionary to store the index of each column to filter by
 filter_dict = get_index_dict_from_columns(FILTER_COLUMNS)
 
@@ -120,6 +160,7 @@ output_dict = get_index_dict_from_columns(OUTPUT_COLUMNS)
 with codecs.open(FILE, "r", encoding="latin1") as csv_file:
     reader = csv.reader(csv_file, delimiter=",")
     csv_file_headers = next(reader)
+
 
     # Update the filter_dict with the index of each column to filter by
     filter_dict = set_index_dict_from_headers(
@@ -146,28 +187,26 @@ with codecs.open(FILE, "r", encoding="latin1") as csv_file:
             EMPTY_ROWS += 1
             continue
 
-        # Get cell values from the row for command line args comparison
-        state = row[filter_dict["Provider State"]]
-        overall_rating = get_valid_number(row[filter_dict["Overall Rating"]], 1)
-        num_beds = get_valid_number(row[filter_dict["Number of Certified Beds"]], 0)
-        num_deficiencies = get_valid_number(
-            row[filter_dict["Rating Cycle 1 Total Number of Health Deficiencies"]], 0
-        )
-        num_penalties = get_valid_number(
-            row[filter_dict["Total Number of Penalties"]], 0
-        )
 
-        # Validate that the row meets the filter criteria
-        if (
-            state == STATE
-            and overall_rating >= MIN_OVERALL_RATING
-            and num_beds >= MIN_NUM_BEDS
-            and num_deficiencies <= MAX_NUM_DEFICIENCIES
-            and num_penalties <= MAX_NUM_PENALTIES
-        ):
-            # format the filtered data into a dictionary with expected output format
+        # Get cell values from the row for dictionary comparison
+        cell_val_dict = get_cell_val_dict(row, FILTER_COLUMNS, filter_dict)
+
+        valid_facility = True
+
+        # Validate all filter conditions are met
+        for key, value in cell_val_dict.items():
+            if not cell_meets_filter_condition(key, value):
+                valid_facility = False
+                break
+
+        if valid_facility:
             filtered_csv_data.append(format_output_dictionaries(row, output_dict))
 
+# Write the filtered data to a JSON file
+with open(OUTPUT_FILE, "w") as json_file:
+    json.dump(filtered_csv_data, json_file)
+
+
 pprint.pprint(len(filtered_csv_data))
-pprint.pprint(filtered_csv_data[0])
+# pprint.pprint(filtered_csv_data[0])
 print(f"Empty Rows: {EMPTY_ROWS}")
