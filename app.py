@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import csv
 import codecs
 import pprint
@@ -16,10 +18,10 @@ OUTPUT_FILE = "output.json"
 FILE = args.file
 STATE = args.state.upper()
 NUM_FACILITIES = args.num_facilities
-MIN_OVERALL_RATING = args.min_overall_rating
+MIN_OVERALL_RATING = args.min_rating
 MIN_NUM_BEDS = args.num_beds
-MAX_NUM_DEFICIENCIES = args.max_num_deficiencies
-MAX_NUM_PENALTIES = args.max_number_penalties
+MAX_NUM_DEFICIENCIES = args.max_deficiencies
+MAX_NUM_PENALTIES = args.max_penalties
 
 # List of columns to filter dataset by
 # Must match the CSV file headers and the command line arguments except for FILE

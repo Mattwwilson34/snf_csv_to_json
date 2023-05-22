@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import pprint
 
 
@@ -75,7 +77,20 @@ def weight_overall_rating(overall_rating):
     """Returns the weighted overall rating"""
 
     overall_rating = int(overall_rating) if overall_rating.isdigit() else 0
-    return overall_rating * 1.25
+
+    match overall_rating:
+        case 1:
+            return 0.20
+        case 2:
+            return 0.40
+        case 3:
+            return 0.60
+        case 4:
+            return 0.80
+        case 5:
+            return 1.00
+        case _:
+            return 0
 
 
 # Multiple factors to consider here
