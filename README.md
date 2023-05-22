@@ -10,7 +10,7 @@ This is a Python program that filters data from a CSV file based on specified co
 4. [Command Line Arguments](#command-line-arguments) 
 5. [Output](#output) 
 6. [Recommendation Score Analytic](#recommendation-score-analytic) 
-  1. [Overall Rating](#overall-rating) 
+  	1. [Overall Rating](#overall-rating) 
 	2. [Number of Beds](#number-of-beds) 
 	3. [Rating Cycle 1 Total Number of Health Deficiencies](#rating-cycle-1-total-number-of-health-deficiencies) 
 	4. [Total Number of Penalties](#total-number-of-penalties) 
