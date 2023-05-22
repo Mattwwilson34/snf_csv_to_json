@@ -107,18 +107,22 @@ This rating is recognizes within the clinical community for being good, but not 
 ### Number of Beds
 
 The number of beds metric is calculated by taking the difference of
-`Number of Certified Beds` and `Average Number of Residents per Day`. This metric is important because it tells use how many beds are currently available for potential residents. There are mutiple factors that are considered in the weighting of this value.
+`Number of Certified Beds` and `Average Number of Residents per Day`. This metric is important because it tells us how many beds are currently available for potential residents. There are mutiple factors that are considered in the weighting of this value.
+
+- **Too Few:** If there are not enough beds for incoming residents then a negative weight is given to lower its reccomendation score.
+
+- **Too Many:** If there are too many open beds, this could suggest that the facility is not desirable thus a negative weight is given for this metric.
+
+- **Sweet Spot:** any facilities that fall between our too few and too many catagories will have a positive weight applied to their score.
 
 #### weighting:
 
 `n = num of available beds`
 
-- Too few beds (n < 5):
-  - If there are not enough beds for incoming residents then a negative weight is given to lower its reccomendation score.
-- Too many beds (n > 50):
-  - If there are too many open beds, this could suggest that the facility is not desirable thus a negative weight is given for this metric.
-- Sweet spot (5 > n < 50):
-  - any facilities that fall between our too few and too many catagories will have a positive weight applied to their score.
+- n < 5 or n > 50
+  - weight of -1
+- n > 5 < 50
+  - wight of 1
 
 ### Rating Cycle 1 Total Number of Health Deficiencies
 
