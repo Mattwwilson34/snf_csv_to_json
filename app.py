@@ -4,18 +4,20 @@ import csv
 import codecs
 import pprint
 import json
+import datetime
 from arg_parse import parse_arguments
 from rec_score_analytic import get_column_data, weight_rec_score_data
 
 # Parse command line arguments
 args = parse_arguments()
 
-# File to output the results to
-OUTPUT_FILE = "output.json"
+# File to output log messages to
+LOG_FILE = "log.txt"
 
 # Assign the arguments to constant variables
 # See cell_meets_filter_condition func for conditional logic
-FILE = args.file
+INPUT_FILE = args.input_file
+OUTPUT_FILE = "output.json"
 STATE = args.state.upper()
 NUM_FACILITIES = args.num_facilities
 MIN_OVERALL_RATING = args.min_rating
@@ -24,7 +26,7 @@ MAX_NUM_DEFICIENCIES = args.max_deficiencies
 MAX_NUM_PENALTIES = args.max_penalties
 
 # List of columns to filter dataset by
-# Must match the CSV file headers and the command line arguments except for FILE
+# Must match the CSV file headers and the command line arguments except for INPUT_FILE
 FILTER_COLUMNS = [
     "Provider State",
     "Overall Rating",
@@ -67,7 +69,7 @@ RECOMMEND_SCORE_COLUMN_DICT = [
 # Output will be a list of dictionaries
 # Each dictionary will represent a facility
 # Each key in this dictionary will represent a key in the output dictionary
-# Each value array will represent the column cell values in the CSV 
+# Each value array will represent the column cell values in the CSV
 # For arrays with more than one value they will be concatenated with a comma and space
 OUTPUT_COLUMN_NAMES = {
     "name": ["Provider Name"],
@@ -169,78 +171,120 @@ def cell_meets_filter_condition(key, cell_value):
 
 def get_recommendation_score(csv_file_headers, row):
     score_index_dict = get_index_dict_from_columns(RECOMMEND_SCORE_COLUMN_DICT)
-    score_index_dict = set_index_dict_from_headers(score_index_dict, csv_file_headers, RECOMMEND_SCORE_COLUMN_DICT)
+    score_index_dict = set_index_dict_from_headers(
+        score_index_dict, csv_file_headers, RECOMMEND_SCORE_COLUMN_DICT
+    )
     rec_score_col_data = get_column_data(row, score_index_dict)
     weighted_data = weight_rec_score_data(rec_score_col_data)
     weighted_sum = sum(weighted_data.values())
-    return weighted_sum / 5
+    # Transform the weighted sum to a 10 point scale
+    weighted_sum = ((weighted_sum + 9.25) / 17.5) * 10
+    # Round the weighted sum to 2 decimal places
+    weighted_sum = round(weighted_sum, 2)
+    return weighted_sum
 
 
-# Dictionary to store the index of each column to filter by
-filter_dict = get_index_dict_from_columns(FILTER_COLUMNS)
+def update_log_file(rows_parsed, empty_rows, len_filtered_rows):
+    """Updates the log file with the command line arguments provided"""
 
-# Dictionary to store index of each column to include in the output
-output_dict = get_index_dict_from_columns(OUTPUT_COLUMNS)
+    with open(LOG_FILE, "a") as log_file:
+        log_file.write(f"Date: {datetime.datetime.now()}\n")
+        # print titles and values of command line arguments provided
+        log_file.write(f"Input File: {INPUT_FILE}\n")
+        log_file.write(f"Output File: {OUTPUT_FILE}\n")
+        log_file.write(f"State: {STATE}\n")
+        log_file.write(f"Number of Facilities: {NUM_FACILITIES}\n")
+        log_file.write(f"Minimum Overall Rating: {MIN_OVERALL_RATING}\n")
+        log_file.write(f"Minimum Number of Beds: {MIN_NUM_BEDS}\n")
+        log_file.write(f"Maximum Number of Deficiencies: {MAX_NUM_DEFICIENCIES}\n")
+        log_file.write(f"Maximum Number of Penalties: {MAX_NUM_PENALTIES}\n")
+        # print dashed separator
+        log_file.write("-" * 50 + "\n")
+        log_file.write(f"Total Rows: {rows_parsed}\n")
+        log_file.write(f"Empty Rows: {empty_rows}\n")
+        log_file.write(f"Filtered Rows: {len_filtered_rows}\n")
+        log_file.write(f"Output Rows: {NUM_FACILITIES}\n")
+        # print star separator
+        log_file.write("*" * 50 + "\n\n")
 
-# Begin CSV parsing
-with codecs.open(FILE, "r", encoding="latin1") as csv_file:
-    reader = csv.reader(csv_file, delimiter=",")
-    csv_file_headers = next(reader)
+def main():
+    # Variables for log output
+    empty_rows = 0
+    rows_parsed = 0
+
+    # Dictionary to store the index of each column to filter by
+    filter_dict = get_index_dict_from_columns(FILTER_COLUMNS)
+
+    # Dictionary to store index of each column to include in the output
+    output_dict = get_index_dict_from_columns(OUTPUT_COLUMNS)
+
+    # Begin CSV parsing
+    with codecs.open(INPUT_FILE, "r", encoding="latin1") as csv_file:
+        reader = csv.reader(csv_file, delimiter=",")
+        csv_file_headers = next(reader)
+
+        # Update the filter_dict with the index of each column to filter by
+        filter_dict = set_index_dict_from_headers(
+            filter_dict, csv_file_headers, FILTER_COLUMNS
+        )
+
+        # Throw error if any of the filter_columns were not found in the CSV
+        validate_index_dict_update(filter_dict, FILTER_COLUMNS)
+
+        # Update the output_dict with the index of each column to include in the output
+        output_dict = set_index_dict_from_headers(
+            output_dict, csv_file_headers, OUTPUT_COLUMNS
+        )
+
+        # Throw error if any of the output_columns were not found in the CSV
+        validate_index_dict_update(output_dict, OUTPUT_COLUMNS)
+
+        filtered_csv_data = []
+
+        # Iterate through each row in the CSV file and filter the data
+        for index, row in enumerate(reader):
+            rows_parsed += 1
+            # Skip empty rows
+            if len(row) == 0:
+                empty_rows += 1
+                continue
+
+            # Get cell values from the row for dictionary comparison
+            cell_val_dict = get_cell_val_dict(row, FILTER_COLUMNS, filter_dict)
+
+            valid_facility = True
+
+            # Validate all filter conditions are met
+            for key, value in cell_val_dict.items():
+                if not cell_meets_filter_condition(key, value):
+                    valid_facility = False
+                    break
+
+            if valid_facility:
+                # Calculate the recommendation score
+                score = get_recommendation_score(csv_file_headers, row)
+
+                # Format the output dictionarie
+                output = format_output_dictionaries(row, output_dict)
+
+                # Add the recommendation score to the output dictionary
+                output["Recommendation Score"] = score
+
+                filtered_csv_data.append(output)
+
+        # Sort by recommendation score
+        filtered_csv_data.sort(key=lambda x: x["Recommendation Score"], reverse=True)
+
+    # Write the filtered data to a JSON file
+    with open(OUTPUT_FILE, "w") as json_file:
+        json.dump(filtered_csv_data[:NUM_FACILITIES], json_file)
+
+    # Update the log file
+    update_log_file(rows_parsed, empty_rows, len(filtered_csv_data))
 
 
-    # Update the filter_dict with the index of each column to filter by
-    filter_dict = set_index_dict_from_headers(
-        filter_dict, csv_file_headers, FILTER_COLUMNS
-    )
-
-    # Throw error if any of the filter_columns were not found in the CSV
-    validate_index_dict_update(filter_dict, FILTER_COLUMNS)
-
-    # Update the output_dict with the index of each column to include in the output
-    output_dict = set_index_dict_from_headers(
-        output_dict, csv_file_headers, OUTPUT_COLUMNS
-    )
-
-    # Throw error if any of the output_columns were not found in the CSV
-    validate_index_dict_update(output_dict, OUTPUT_COLUMNS)
-
-    filtered_csv_data = []
-
-    # Iterate through each row in the CSV file and filter the data
-    for index, row in enumerate(reader):
-        # Skip empty rows
-        if len(row) == 0:
-            EMPTY_ROWS += 1
-            continue
-
-        # Get cell values from the row for dictionary comparison
-        cell_val_dict = get_cell_val_dict(row, FILTER_COLUMNS, filter_dict)
-
-        valid_facility = True
-
-        # Validate all filter conditions are met
-        for key, value in cell_val_dict.items():
-            if not cell_meets_filter_condition(key, value):
-                valid_facility = False
-                break
-
-        if valid_facility:
-            # Calculate the recommendation score
-            score = get_recommendation_score(csv_file_headers, row)
-
-            # Format the output dictionarie
-            output = format_output_dictionaries(row, output_dict)
-
-            # Add the recommendation score to the output dictionary
-            output["Recommendation Score"] = score
-
-            filtered_csv_data.append(output)
-
-# Write the filtered data to a JSON file
-with open(OUTPUT_FILE, "w") as json_file:
-    json.dump(filtered_csv_data, json_file)
+    print(json.dumps(filtered_csv_data[:NUM_FACILITIES]))
 
 
-pprint.pprint(len(filtered_csv_data))
-# pprint.pprint(filtered_csv_data[0])
-print(f"Empty Rows: {EMPTY_ROWS}")
+if __name__ == "__main__":
+    main()

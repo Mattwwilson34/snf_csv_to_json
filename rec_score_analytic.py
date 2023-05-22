@@ -80,15 +80,15 @@ def weight_overall_rating(overall_rating):
 
     match overall_rating:
         case 1:
-            return 0.20
+            return 0.25
         case 2:
-            return 0.40
+            return 0.50
         case 3:
-            return 0.60
+            return 0.75
         case 4:
-            return 0.80
+            return 0.100
         case 5:
-            return 1.00
+            return 1.25
         case _:
             return 0
 
