@@ -3,6 +3,7 @@ import codecs
 import pprint
 import json
 from arg_parse import parse_arguments
+from rec_score_analytic import get_column_data, weight_rec_score_data
 
 # Parse command line arguments
 args = parse_arguments()
@@ -44,6 +45,20 @@ OUTPUT_COLUMNS = [
     "Overall Rating",
     "Rating Cycle 1 Total Number of Health Deficiencies",
     "Total Number of Penalties",
+]
+
+RECOMMEND_SCORE_COLUMN_DICT = [
+    "Overall Rating",
+    "Number of Certified Beds",
+    "Average Number of Residents per Day",
+    "Rating Cycle 1 Total Number of Health Deficiencies",
+    "Total Number of Penalties",
+    "Abuse Icon",
+    "Most Recent Health Inspection More Than 2 Years Ago",
+    "With a Resident and Family Council",
+    "Reported Physical Therapist Staffing Hours per Resident Per Day",
+    "Number of Facility Reported Incidents",
+    "Number of Substantiated Complaints",
 ]
 
 # Dictionary used to format the output
@@ -150,6 +165,15 @@ def cell_meets_filter_condition(key, cell_value):
         return False
 
 
+def get_recommendation_score(csv_file_headers, row):
+    score_index_dict = get_index_dict_from_columns(RECOMMEND_SCORE_COLUMN_DICT)
+    score_index_dict = set_index_dict_from_headers(score_index_dict, csv_file_headers, RECOMMEND_SCORE_COLUMN_DICT)
+    rec_score_col_data = get_column_data(row, score_index_dict)
+    weighted_data = weight_rec_score_data(rec_score_col_data)
+    weighted_sum = sum(weighted_data.values())
+    return weighted_sum / 5
+
+
 # Dictionary to store the index of each column to filter by
 filter_dict = get_index_dict_from_columns(FILTER_COLUMNS)
 
@@ -187,7 +211,6 @@ with codecs.open(FILE, "r", encoding="latin1") as csv_file:
             EMPTY_ROWS += 1
             continue
 
-
         # Get cell values from the row for dictionary comparison
         cell_val_dict = get_cell_val_dict(row, FILTER_COLUMNS, filter_dict)
 
@@ -200,7 +223,16 @@ with codecs.open(FILE, "r", encoding="latin1") as csv_file:
                 break
 
         if valid_facility:
-            filtered_csv_data.append(format_output_dictionaries(row, output_dict))
+            # Calculate the recommendation score
+            score = get_recommendation_score(csv_file_headers, row)
+
+            # Format the output dictionarie
+            output = format_output_dictionaries(row, output_dict)
+
+            # Add the recommendation score to the output dictionary
+            output["Recommendation Score"] = score
+
+            filtered_csv_data.append(output)
 
 # Write the filtered data to a JSON file
 with open(OUTPUT_FILE, "w") as json_file:
