@@ -234,7 +234,7 @@ Analyzing the number of facility reported incidents provides an indication of th
 
 #### weighting:
 
-`n = number of reported incidents
+`n = number of reported incidents`
 
 - `n = 0`
   - A weight of 1
@@ -251,7 +251,7 @@ The number of substantiated complaints provides an indication of the nursing hom
 
 #### weighting:
 
-`n = number of substantiated complaints
+`n = number of substantiated complaints`
 
 - `n = 0`
   - A weight of 1
