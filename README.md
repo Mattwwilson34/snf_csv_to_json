@@ -219,7 +219,7 @@ I given the infrequency of facilities reaching the 0.09 marker I chose to not pe
 
 #### weighting:
 
-`n = avg(PT hours of care per pt per day)
+`n = avg(PT hours of care per pt per day)`
 
 - n > 0.09
   - A weight of 1
